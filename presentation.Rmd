@@ -4,6 +4,7 @@ subtitle: "CPT Nick Normandin"
 output: 
   beamer_presentation: 
     colortheme: seahorse
+    keep_tex: yes
     theme: Dresden
 ---
 
@@ -29,15 +30,41 @@ Because you can aggregate the ensemble predictions to form a completely unique *
 
 #### ...see **[github.com/nnormandin/localexpeRt](https://github.com/nnormandin/localexpeRt)**
 
+<!-- ## What problem am I solving? -->
+
+<!-- Most classification methods produce scores for class membership which are interpereted as measures of class affiliation probability. This is the foundation of local expert regression. However, these 'probabilities' are not usually **well-calibrated**.  -->
+
+<!-- #### Definition -->
+<!-- For a model $f$ and score $s_i$ to be well-calibrated for class $c_i$, the empirical probability of a correct classification $P(c_i | f( c_i | x_i)=s_i)$ must converge to $f(c_i | x_i) = s_i$. -->
+
+<!-- #### Example -->
+<!-- When $s_i = 0.9$, the probability of a correct classification should converge to $P(c_i | s_i = 0.9) = 0.9$. Otherwise, this isn't *really* a 'probability.' -->
+
 ## What problem am I solving?
 
-Most classification methods produce scores for class membership which are interpereted as measures of class affiliation probability. This is the foundation of local expert regression. However, these 'probabilities' are not usually **well-calibrated**. 
+\begin{columns}
+\begin{column}{0.48\textwidth}
 
-#### Definition
+Most classification methods produce scores for class membership which are interpereted as measures of class affiliation probability. This is the foundation of local expert regression. However, these 'probabilities' are not usually \textbf{well-calibrated}. 
+
+\end{column}
+
+
+\begin{column}{0.48\textwidth}
+\begin{block}{Definition:}
+
 For a model $f$ and score $s_i$ to be well-calibrated for class $c_i$, the empirical probability of a correct classification $P(c_i | f( c_i | x_i)=s_i)$ must converge to $f(c_i | x_i) = s_i$.
 
-#### Example
-When $s_i = 0.9$, the probability of a correct classification should converge to $P(c_i | s_i = 0.9) = 0.9$. Otherwise, this isn't *really* a 'probability.'
+\end{block}
+\begin{block}{Example:}
+
+When $s_i = 0.9$, the probability of a correct classification should converge to $P(c_i | s_i = 0.9) = 0.9$. Otherwise, this isn't \textit{really} a 'probability.'
+
+\end{block}
+\end{column}
+\end{columns}
+
+
 
 ## How do I propose to solve it?
 
@@ -75,7 +102,54 @@ Let's say you want to predict the high temperature in West Point, NY, tomorrow a
 
 image: ![image](~/R/projects/MORS_2017/figure1/last.png)
 
+
+## How is local expert different from normal regression?
+
+
 # Probability calibration
+
+## Why are some model scores poorly calibrated?
+
+\begin{columns}[t]
+\begin{column}{0.48\textwidth}
+
+\begin{block}{$s_i$ dense around 0.5}
+\begin{itemize}
+\item Maximal margin hyperplanes push scores away from extremes of distribution
+\item Common in support vector machines, boosted learners
+\end{itemize}
+\end{block}
+
+\end{column}
+
+
+\begin{column}{0.48\textwidth}
+
+\begin{block}{$s_i$ dense around 0, 1}
+\begin{itemize}
+\item Model assumptions make class probabilites unrealistically confident
+\item Naive Bayes!
+\end{itemize}
+\end{block}
+\end{column}
+\end{columns}
+
+
+## How can we visualize calibration?
+
+##### Reliability plots!
+1. Bin predictions by $s_i$ (x-axis)
+2. Calculate accuracy by bin (y-axis)
+
+## Method 1: Isotonic Regression
+A strictly-nondecreasing piecewise linear function $m$, where $y_i = m(s_i) + \epsilon$ fit such that:
+
+\begin{centering}
+$\hat{m} = {argmin}_z \sum_i{y_i-z(s_i) ^2}$
+\end{centering}
+
+## Method 2: Platt Scaling
+
 
 # Case study
 
@@ -91,7 +165,7 @@ image: ![image](~/R/projects/MORS_2017/figure1/last.png)
 
 1. Compensation for class imbalance
 2. Kappa-based optimization methods
-3. Incorportation of SMOTE
+3. Incorporation of SMOTE
 4. High-level parallelization
 
 # Questions
