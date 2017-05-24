@@ -33,7 +33,7 @@ Because you can aggregate the ensemble predictions to form a completely unique *
 <!-- ## What problem am I solving? -->
 
 <!-- Most classification methods produce scores for class membership which are interpereted as measures of class affiliation probability. This is the foundation of local expert regression. However, these 'probabilities' are not usually **well-calibrated**.  -->
-
+ 
 <!-- #### Definition -->
 <!-- For a model $f$ and score $s_i$ to be well-calibrated for class $c_i$, the empirical probability of a correct classification $P(c_i | f( c_i | x_i)=s_i)$ must converge to $f(c_i | x_i) = s_i$. -->
 
@@ -163,9 +163,8 @@ $\hat{m} = {argmin}_z \sum_i{y_i-z(s_i) ^2}$
 
 ## Which topics require more research?
 
-1. Compensation for class imbalance
-2. Kappa-based optimization methods
-3. Incorporation of SMOTE
+1. Compensation for class imbalance (SMOTE?)
+3. Kappa-based optimization methods
 4. High-level parallelization
 
 # Questions
