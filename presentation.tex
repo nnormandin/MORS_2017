@@ -126,7 +126,7 @@ of each individual forecast.
 \begin{columns}
 \begin{column}{0.48\textwidth}
 
-Most classification methods produce scores for class membership which are interpereted as measures of class affiliation probability. This is the foundation of local expert regression. However, these 'probabilities' are not usually \textbf{well-calibrated}. 
+Most classification methods produce scores for class membership which are interpereted as measures of class affiliation probability. This is the foundation of local expert regression. However, these `probabilities' are not usually \textbf{well-calibrated}. 
 
 \end{column}
 
@@ -139,7 +139,7 @@ For a model $f$ and score $s_i$ to be well-calibrated for class $c_i$, the empir
 \end{block}
 \begin{block}{Example:}
 
-When $s_i = 0.9$, the probability of a correct classification should converge to $P(c_i | s_i = 0.9) = 0.9$. Otherwise, this isn't \textit{really} a 'probability.'
+When $s_i = 0.9$, the probability of a correct classification should converge to $P(c_i | s_i = 0.9) = 0.9$. Otherwise, this isn't \textit{really} a `probability.'
 
 \end{block}
 \end{column}
@@ -181,51 +181,51 @@ interpolated from them won't be reliable. How can we deal with this?}
 
 \begin{frame}{How is local expert different from normal regression?}
 
-Let's say you want to predict the high temperature in West Point, NY,
-tomorrow and you have a vector of covariates \(\mathbf{x}_i\) pertaining
-to weather forecasting.
-
-image: \includegraphics{~/R/projects/MORS_2017/figure1/first.png}
-
-\end{frame}
-
-\begin{frame}{How is local expert different from normal regression?}
-
-Let's say you want to predict the high temperature in West Point, NY,
-tomorrow and you have a vector of covariates \(\mathbf{x}_i\) pertaining
-to weather forecasting.
-
-image: \includegraphics{~/R/projects/MORS_2017/figure1/second.png}
+\begin{figure}[htbp]
+\centering
+\includegraphics{~/R/projects/MORS_2017/figure1/first.png}
+\caption{image}
+\end{figure}
 
 \end{frame}
 
 \begin{frame}{How is local expert different from normal regression?}
 
-Let's say you want to predict the high temperature in West Point, NY,
-tomorrow and you have a vector of covariates \(\mathbf{x}_i\) pertaining
-to weather forecasting.
-
-image: \includegraphics{~/R/projects/MORS_2017/figure1/third.png}
-
-\end{frame}
-
-\begin{frame}{How is local expert different from normal regression?}
-
-Let's say you want to predict the high temperature in West Point, NY,
-tomorrow and you have a vector of covariates \(\mathbf{x}_i\) pertaining
-to weather forecasting.
-
-image: \includegraphics{~/R/projects/MORS_2017/figure1/fourth.png}
+\begin{figure}[htbp]
+\centering
+\includegraphics{~/R/projects/MORS_2017/figure1/second.png}
+\caption{image}
+\end{figure}
 
 \end{frame}
 
 \begin{frame}{How is local expert different from normal regression?}
 
-Let's say you want to predict the high temperature in West Point, NY,
-tomorrow and you have a vector of covariates \(\mathbf{x}_i\) pertaining
-to weather forecasting.
+\begin{figure}[htbp]
+\centering
+\includegraphics{~/R/projects/MORS_2017/figure1/third.png}
+\caption{image}
+\end{figure}
 
-image: \includegraphics{~/R/projects/MORS_2017/figure1/last.png}
+\end{frame}
+
+\begin{frame}{How is local expert different from normal regression?}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics{~/R/projects/MORS_2017/figure1/fourth.png}
+\caption{image}
+\end{figure}
+
+\end{frame}
+
+\begin{frame}{How is local expert different from normal regression?}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics{~/R/projects/MORS_2017/figure1/last.png}
+\caption{image}
+\end{figure}
 
 \end{frame}
 
@@ -311,11 +311,9 @@ $\hat{m} = {argmin}_z \sum_i{y_i-z(s_i) ^2}$
 \def\labelenumi{\arabic{enumi}.}
 \tightlist
 \item
-  Compensation for class imbalance
+  Compensation for class imbalance (SMOTE?)
 \item
   Kappa-based optimization methods
-\item
-  Incorporation of SMOTE
 \item
   High-level parallelization
 \end{enumerate}

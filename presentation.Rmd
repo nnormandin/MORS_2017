@@ -45,7 +45,7 @@ Because you can aggregate the ensemble predictions to form a completely unique *
 \begin{columns}
 \begin{column}{0.48\textwidth}
 
-Most classification methods produce scores for class membership which are interpereted as measures of class affiliation probability. This is the foundation of local expert regression. However, these 'probabilities' are not usually \textbf{well-calibrated}. 
+Most classification methods produce scores for class membership which are interpereted as measures of class affiliation probability. This is the foundation of local expert regression. However, these `probabilities' are not usually \textbf{well-calibrated}. 
 
 \end{column}
 
@@ -58,7 +58,7 @@ For a model $f$ and score $s_i$ to be well-calibrated for class $c_i$, the empir
 \end{block}
 \begin{block}{Example:}
 
-When $s_i = 0.9$, the probability of a correct classification should converge to $P(c_i | s_i = 0.9) = 0.9$. Otherwise, this isn't \textit{really} a 'probability.'
+When $s_i = 0.9$, the probability of a correct classification should converge to $P(c_i | s_i = 0.9) = 0.9$. Otherwise, this isn't \textit{really} a `probability.'
 
 \end{block}
 \end{column}
@@ -78,29 +78,20 @@ When $s_i = 0.9$, the probability of a correct classification should converge to
 # Local expert
 
 ## How is local expert different from normal regression?
-Let's say you want to predict the high temperature in West Point, NY, tomorrow and you have a vector of covariates $\mathbf{x}_i$ pertaining to weather forecasting.
 
-image: ![image](~/R/projects/MORS_2017/figure1/first.png)
-
-## How is local expert different from normal regression?
-Let's say you want to predict the high temperature in West Point, NY, tomorrow and you have a vector of covariates $\mathbf{x}_i$ pertaining to weather forecasting.
-
-image: ![image](~/R/projects/MORS_2017/figure1/second.png)
+![image](~/R/projects/MORS_2017/figure1/first.png)
 
 ## How is local expert different from normal regression?
-Let's say you want to predict the high temperature in West Point, NY, tomorrow and you have a vector of covariates $\mathbf{x}_i$ pertaining to weather forecasting.
-
-image: ![image](~/R/projects/MORS_2017/figure1/third.png)
+![image](~/R/projects/MORS_2017/figure1/second.png)
 
 ## How is local expert different from normal regression?
-Let's say you want to predict the high temperature in West Point, NY, tomorrow and you have a vector of covariates $\mathbf{x}_i$ pertaining to weather forecasting.
-
-image: ![image](~/R/projects/MORS_2017/figure1/fourth.png)
+![image](~/R/projects/MORS_2017/figure1/third.png)
 
 ## How is local expert different from normal regression?
-Let's say you want to predict the high temperature in West Point, NY, tomorrow and you have a vector of covariates $\mathbf{x}_i$ pertaining to weather forecasting.
+![image](~/R/projects/MORS_2017/figure1/fourth.png)
 
-image: ![image](~/R/projects/MORS_2017/figure1/last.png)
+## How is local expert different from normal regression?
+![image](~/R/projects/MORS_2017/figure1/last.png)
 
 
 ## How is local expert different from normal regression?
