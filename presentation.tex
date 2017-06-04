@@ -265,29 +265,40 @@ interpolated from them won't be reliable. How can we deal with this?}
 
 \begin{frame}{How can we visualize calibration?}
 
-\begin{block}{Reliability plots!}
+Cross-validated class probabilities from a naive bayes model trained on
+the Pima Indian Diabetes data
 
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\tightlist
-\item
-  Bin predictions by \(s_i\) (x-axis)
-\item
-  Calculate accuracy by bin (y-axis)
-\end{enumerate}
+\footnotesize
+\includegraphics{presentation_files/figure-beamer/unnamed-chunk-1-1.pdf}
 
-\end{block}
+\end{frame}
+
+\begin{frame}{How can we visualize calibration?}
+
+Reliability plot: \textbf{(1)} Bin predictions by \(s_i\) (x-axis),
+\textbf{(2)} calculate \(p(c_i)\) by bin (y-axis)
+
+\includegraphics{presentation_files/figure-beamer/unnamed-chunk-2-1.pdf}
 
 \end{frame}
 
 \begin{frame}{Method 1: Isotonic Regression}
 
 A strictly-nondecreasing piecewise linear function \(m\), where
-\(y_i = m(s_i) + \epsilon\) fit such that:
+\(y_i = m(s_i) + \epsilon\) fit such that
+\(\hat{m} = {argmin}_z \sum_i{y_i-z(s_i) ^2}\).
 
-\begin{centering}
-$\hat{m} = {argmin}_z \sum_i{y_i-z(s_i) ^2}$
-\end{centering}
+\includegraphics{presentation_files/figure-beamer/unnamed-chunk-4-1.pdf}
+
+\end{frame}
+
+\begin{frame}{Method 1: Isotonic Regression}
+
+A strictly-nondecreasing piecewise linear function \(m\), where
+\(y_i = m(s_i) + \epsilon\) fit such that
+\(\hat{m} = {argmin}_z \sum_i{y_i-z(s_i) ^2}\).
+
+\includegraphics{presentation_files/figure-beamer/unnamed-chunk-5-1.pdf}
 
 \end{frame}
 
