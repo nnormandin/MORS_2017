@@ -288,10 +288,11 @@ tc <- trainControl(method = 'cv', number = 3, savePredictions = TRUE,
 
 
 ## COA 0: Tune and train a regression model
-
-```{r, message=FALSE, warning=FALSE}
+\footnotesize
+```{r, echo = TRUE, message=FALSE, warning=FALSE, cache = TRUE}
 mod0 <- train(x = Xtrain, y = ytrain, method = 'gbm',
-              tuneLength = 1, trControl = tc)
+              tuneLength = 1, trControl = tc,
+              verbose = FALSE)
 ```
 
 
@@ -299,24 +300,53 @@ mod0 <- train(x = Xtrain, y = ytrain, method = 'gbm',
 
 Map the continuous `y` vector into a binary matrix
 
+\footnotesize
 ```{r, echo = TRUE}
 library(localexpeRt)
 yb <- BinCols(ytrain, n = 8)
 ```
 
+\normalsize
 Induce separate models across each column in the matrix
 
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
+\footnotesize
+```{r, echo=TRUE, message=FALSE, warning=FALSE, cache = TRUE}
 LEs <- TrainLEs(x = Xtrain, bincols = yb$cols, trControl = tc,
-                method = 'gbm', n.folds = 3, tuneLength = 1)
+                method = 'gbm', n.folds = 3, tuneLength = 1,
+                verbose = FALSE)
 
 LE_info <- ExtractModelInfo(LEs)
 ```
 
 ## COA 1: Use a local expert ensemble
 
+\footnotesize
 ```{r, echo=TRUE, message=FALSE, warning=FALSE}
 PlotLEs(LE_info)
+```
+
+## COA 1: Use a local expert ensemble
+Now for each separate instance, we're predicting a distribution instead of a value:
+
+\footnotesize
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+FitInstance(LE_info$preds.matrix[1,], yb$y.vals, plot = TRUE)
+```
+
+## COA 1: Use a local expert ensemble
+Now for each separate instance, we're predicting a distribution instead of a value:
+
+\footnotesize
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+FitInstance(LE_info$preds.matrix[2,], yb$y.vals, plot = TRUE)
+```
+
+## COA 1: Use a local expert ensemble
+Now for each separate instance, we're predicting a distribution instead of a value:
+
+\footnotesize
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+FitInstance(LE_info$preds.matrix[3,], yb$y.vals, plot = TRUE)
 ```
 
 
@@ -328,7 +358,8 @@ PlotLEs(LE_info)
 
 ## Evaluate model performance
 
-```{r}
+\footnotesize
+```{r, echo = TRUE}
 pred0 <- predict(mod0, Xtest)
 
 # pred1 <- 
