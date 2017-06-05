@@ -13,14 +13,16 @@ knitr::opts_chunk$set(echo = FALSE)
 library(mlbench)
 library(caret)
 library(data.table)
+library(MLmetrics)
 data("PimaIndiansDiabetes")
 
 ReliabilityPlot <- function(obs, pred, bins = 10) {
+  # save and reset default graphical parameters
   opar <- par(no.readonly = TRUE)
   on.exit(par(opar))
   plot(
-    c(0, .5),
-    c(0, .5),
+    c(0, 1),
+    c(0, 1),
     col = "grey",
     type = "l",
     xlab = expression('s'[i]),
@@ -46,8 +48,11 @@ ReliabilityPlot <- function(obs, pred, bins = 10) {
   is.nan.idx <- !is.nan(k$V2)
   k <- k[is.nan.idx, ]
   
-  lines(k$V2, k$V1, col = 'red', type = 'o', lwd = 3)
+  lines(k$V2, k$V1, col = 'red', type = 'o', lwd = 4)
 }
+
+
+
 ```
 
 # Introduction
@@ -169,18 +174,22 @@ When $s_i = 0.9$, the probability of a correct classification should converge to
 Cross-validated class probabilities from a naive bayes model trained on the Pima Indian Diabetes data 
 
 \footnotesize
-```{r, message=FALSE, warning=FALSE}
-m <- train(x = PimaIndiansDiabetes[,1:8], y = PimaIndiansDiabetes[,9],
-           method = 'nb', trControl = trainControl(method = 'cv',
+```{r, message=FALSE, warning=FALSE, cache = TRUE}
+m <- train(x = PimaIndiansDiabetes[,1:8], y = PimaIndiansDiabetes[,9], tuneLength = 1,
+           method = 'svmLinear', trControl = trainControl(method = 'cv',
                                                    savePredictions = TRUE,
                                                    classProbs = TRUE))
 
-result <- data.table(prob = m$pred$pos,
-                     class = ifelse(m$pred$obs == 'pos', 1, 0))
+pred <- m$pred[order(m$pred$rowIndex),]
+
+result <- data.table(prob = pred$pos,
+                     class = ifelse(pred$obs == 'pos', 1, 0))
 
 plot(x = result$prob, y = result$class, pch = '|',
      xlab = 'p(y = 1)', ylab = '', bty = 'n', yaxt = 'n')
 ```
+
+The logarithmic loss here is `r MLmetrics::LogLoss(result$prob, result$class)`
 
 ## How can we visualize calibration?
 
@@ -193,9 +202,9 @@ ReliabilityPlot(result$class, result$prob, bins = 10)
 ## Method 1: Isotonic Regression
 A strictly-nondecreasing piecewise linear function $m$, where $y_i = m(s_i) + \epsilon$ fit such that $\hat{m} = {argmin}_z \sum_i{y_i-z(s_i) ^2}$.
 
-```{r}
+```{r, cache = TRUE}
 x <- seq(200)
-y <- seq(200) + rnorm(200, 0, 20)
+y <- seq(200) + rnorm(200, 0, 30)
 ```
 
 ```{r}
@@ -210,8 +219,52 @@ plot(x, y, bty = 'n', yaxt = 'n', xaxt = 'n', ylab = '', xlab = '')
 lines(isoreg(x,y), lwd = 4)
 ```
 
-## Method 2: Platt Scaling
+## Method 1: Isotonic Regression
+Applying it to the Pima Indian Diabetes estimates from earlier
 
+```{r}
+iso_mod <- isoreg(x = result$prob, y = result$class)
+ip <- setorder(data.table(iso_mod$yf, iso_mod$ord), V2)
+result[, iso_probs := ip$V1]
+
+plot(x = result$prob, y = result$class, pch = '|',
+     xlab = 'p(y = 1)', ylab = '', bty = 'n', yaxt = 'n')
+
+lines(iso_mod, lwd = 4)
+
+```
+
+The logarithmic loss here is `r MLmetrics::LogLoss(result$iso_probs, result$class)`
+
+
+## Method 2: Platt Scaling
+Pass $s_i$ through the sigmoid
+
+$$P(c_i | s_i) = \frac{1}{1 + \exp(As_i + B)}$$
+
+
+where $A$ and $B$ are the solution to
+$$\underset{A, B}{\operatorname{argmax}} - \sum\limits_{i} y_i \log(p_i) + (1 - y_i) \log(1- p_i)$$
+
+
+## Method 2: Platt Scaling
+Applying it to the Pima Indian Diabetes estimates from earlier
+
+
+```{r}
+
+pmod <- train(x = result[,1], y = ifelse(result$class == 1, 'y', 'n'),
+           method = 'glm', trControl = trainControl(method = 'cv',
+                                                   savePredictions = TRUE,
+                                                   classProbs = TRUE))
+
+result[, platt_probs := pmod$pred[order(pmod$pred$rowIndex),4]]
+
+plot(x = result$prob, y = result$class, pch = '|',
+     xlab = 'p(y = 1)', ylab = '', bty = 'n', yaxt = 'n')
+
+lines(y = sort(result$platt_probs), x = sort(result$prob), lwd = 4, col = 'red')
+```
 
 # Case study
 

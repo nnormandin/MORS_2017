@@ -271,6 +271,8 @@ the Pima Indian Diabetes data
 \footnotesize
 \includegraphics{presentation_files/figure-beamer/unnamed-chunk-1-1.pdf}
 
+The logarithmic loss here is 0.4816054
+
 \end{frame}
 
 \begin{frame}{How can we visualize calibration?}
@@ -302,7 +304,32 @@ A strictly-nondecreasing piecewise linear function \(m\), where
 
 \end{frame}
 
+\begin{frame}{Method 1: Isotonic Regression}
+
+Applying it to the Pima Indian Diabetes estimates from earlier
+
+\includegraphics{presentation_files/figure-beamer/unnamed-chunk-6-1.pdf}
+
+The logarithmic loss here is 0.4575714
+
+\end{frame}
+
 \begin{frame}{Method 2: Platt Scaling}
+
+Pass \(s_i\) through the sigmoid
+
+\[P(c_i | s_i) = \frac{1}{1 + \exp(As_i + B)}\]
+
+where \(A\) and \(B\) are the solution to
+\[\underset{A, B}{\operatorname{argmax}} - \sum\limits_{i} y_i \log(p_i) + (1 - y_i) \log(1- p_i)\]
+
+\end{frame}
+
+\begin{frame}{Method 2: Platt Scaling}
+
+Applying it to the Pima Indian Diabetes estimates from earlier
+
+\includegraphics{presentation_files/figure-beamer/unnamed-chunk-7-1.pdf}
 
 \end{frame}
 
