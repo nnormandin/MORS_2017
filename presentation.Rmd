@@ -253,7 +253,7 @@ Applying it to the Pima Indian Diabetes estimates from earlier
 
 ```{r}
 
-pmod <- train(x = result[,1], y = ifelse(result$class == 1, 'y', 'n'),
+pmod <- train(x = result[,1], y = ifelse(result$class == 1, 'y', 'n'), family = 'binomial',
            method = 'glm', trControl = trainControl(method = 'cv',
                                                    savePredictions = TRUE,
                                                    classProbs = TRUE))
@@ -267,6 +267,10 @@ lines(y = sort(result$platt_probs), x = sort(result$prob), lwd = 4, col = 'red')
 ```
 
 # Case study
+
+
+
+
 
 # Results
 
