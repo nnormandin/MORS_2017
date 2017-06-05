@@ -14,6 +14,7 @@ library(mlbench)
 library(caret)
 library(data.table)
 library(MLmetrics)
+library(localexpeRt)
 data("PimaIndiansDiabetes")
 
 ReliabilityPlot <- function(obs, pred, bins = 10) {
@@ -72,16 +73,6 @@ I created a new kind of ensemble forecasting method that I've called local exper
 Because you can aggregate the ensemble predictions to form a completely unique *probability distribution function* for each prediction. You can understand **risk** not just in terms of a model, but in terms of each individual forecast.
 
 #### ...see **[github.com/nnormandin/localexpeRt](https://github.com/nnormandin/localexpeRt)**
-
-<!-- ## What problem am I solving? -->
-
-<!-- Most classification methods produce scores for class membership which are interpereted as measures of class affiliation probability. This is the foundation of local expert regression. However, these 'probabilities' are not usually **well-calibrated**.  -->
- 
-<!-- #### Definition -->
-<!-- For a model $f$ and score $s_i$ to be well-calibrated for class $c_i$, the empirical probability of a correct classification $P(c_i | f( c_i | x_i)=s_i)$ must converge to $f(c_i | x_i) = s_i$. -->
-
-<!-- #### Example -->
-<!-- When $s_i = 0.9$, the probability of a correct classification should converge to $P(c_i | s_i = 0.9) = 0.9$. Otherwise, this isn't *really* a 'probability.' -->
 
 ## What problem am I solving?
 
@@ -268,13 +259,83 @@ lines(y = sort(result$platt_probs), x = sort(result$prob), lwd = 4, col = 'red')
 
 # Case study
 
+## The task
 
+- 30,000 records of 300+ variables related to Russian housing transactions
+- very dirty, lots of multicollinearity
+
+![image](~/R/projects/MORS_2017/figure1/kaggle.png)
+
+## Preparing the data
+
+I cleaned and pre-processed separately, so we'll just read in those files and partition the train and test sets.
+
+\footnotesize
+```{r, echo = TRUE}
+X <- readRDS('./dataX')
+y <- readRDS('./dataY')
+
+trainset <- createDataPartition(y, p = 0.1)[[1]]
+
+Xtrain <- X[trainset,]; Xtest <- X[-trainset,]
+ytrain <- y[trainset]; ytest <- y[-trainset]
+```
+
+```{r}
+tc <- trainControl(method = 'cv', number = 3, savePredictions = TRUE,
+                   classProbs = TRUE, returnData = FALSE)
+```
+
+
+## COA 0: Tune and train a regression model
+
+```{r, message=FALSE, warning=FALSE}
+mod0 <- train(x = Xtrain, y = ytrain, method = 'gbm',
+              tuneLength = 1, trControl = tc)
+```
+
+
+## COA 1: Use a local expert ensemble
+
+Map the continuous `y` vector into a binary matrix
+
+```{r, echo = TRUE}
+library(localexpeRt)
+yb <- BinCols(ytrain, n = 8)
+```
+
+Induce separate models across each column in the matrix
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+LEs <- TrainLEs(x = Xtrain, bincols = yb$cols, trControl = tc,
+                method = 'gbm', n.folds = 3, tuneLength = 1)
+
+LE_info <- ExtractModelInfo(LEs)
+```
+
+## COA 1: Use a local expert ensemble
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+PlotLEs(LE_info)
+```
+
+
+## COA 2: Local expert with calibrated probabilities
 
 
 
 # Results
 
+## Evaluate model performance
 
+```{r}
+pred0 <- predict(mod0, Xtest)
+
+# pred1 <- 
+
+# pred2 <- 
+
+```
 
 # Conclusion
 
