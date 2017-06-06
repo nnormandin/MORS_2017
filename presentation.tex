@@ -495,13 +495,6 @@ Now for each separate instance, we're predicting a distribution instead
 of a value:
 
 \footnotesize
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\KeywordTok{FitInstance}\NormalTok{(LE_info$preds.matrix[}\DecValTok{1}\NormalTok{,], yb$y.vals, }\DataTypeTok{plot =} \OtherTok{TRUE}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
 \includegraphics{presentation_files/figure-beamer/unnamed-chunk-14-1.pdf}
 
 \begin{verbatim}
@@ -1075,13 +1068,6 @@ Now for each separate instance, we're predicting a distribution instead
 of a value:
 
 \footnotesize
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\KeywordTok{FitInstance}\NormalTok{(LE_info$preds.matrix[}\DecValTok{2}\NormalTok{,], yb$y.vals, }\DataTypeTok{plot =} \OtherTok{TRUE}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
 \includegraphics{presentation_files/figure-beamer/unnamed-chunk-15-1.pdf}
 
 \begin{verbatim}
@@ -1655,13 +1641,6 @@ Now for each separate instance, we're predicting a distribution instead
 of a value:
 
 \footnotesize
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\KeywordTok{FitInstance}\NormalTok{(LE_info$preds.matrix[}\DecValTok{3}\NormalTok{,], yb$y.vals, }\DataTypeTok{plot =} \OtherTok{TRUE}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
 \includegraphics{presentation_files/figure-beamer/unnamed-chunk-16-1.pdf}
 
 \begin{verbatim}
@@ -2279,6 +2258,68 @@ of a value:
 
 \end{frame}
 
+\begin{frame}[fragile]{COA 1: Use a local expert ensemble}
+
+Predict \(\hat{y}\) using just the means of the empirical distributions
+
+\footnotesize
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{LE_fits <-}\StringTok{ }\KeywordTok{FitMatrix}\NormalTok{(LE_info$preds.matrix, yb$y.vals)}
+\NormalTok{MLmetrics::}\KeywordTok{RMSE}\NormalTok{(LE_fits$mean, ytrain)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 3473279
+\end{verbatim}
+
+\end{frame}
+
+\begin{frame}{COA 2: Local expert with calibrated probabilities}
+
+The output of each local expert must be calibrated independently. Each
+has a distinct reliability plot, and class imbalance has a substantial
+effect on the probability scores generated.
+
+\includegraphics{presentation_files/figure-beamer/unnamed-chunk-18-1.pdf}
+
+\end{frame}
+
+\begin{frame}{COA 2: Local expert with calibrated probabilities}
+
+The output of each local expert must be calibrated independently. Each
+has a distinct reliability plot, and class imbalance has a substantial
+effect on the probability scores generated.
+
+\includegraphics{presentation_files/figure-beamer/unnamed-chunk-19-1.pdf}
+
+\end{frame}
+
+\begin{frame}{COA 2: Local expert with calibrated probabilities}
+
+Instead of simply fitting an isotonic regression model to our local
+expert output, we can remove some of the bumpiness of the step function
+and reduce overfitting by bootstrapping. The steps are:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Draw random sample with replacement
+\item
+  Fit isotonic step function using PAVA algorithm
+\item
+  Repeat steps 1 \& 2 for 500 iterations
+\item
+  Average all step functions
+\item
+  Return final `step function' (still monotonic)
+\end{enumerate}
+
+\end{frame}
+
 \begin{frame}{COA 2: Local expert with calibrated probabilities}
 
 \end{frame}
@@ -2292,46 +2333,7 @@ of a value:
 \begin{Shaded}
 \begin{Highlighting}[]
 \NormalTok{pred0 <-}\StringTok{ }\KeywordTok{predict}\NormalTok{(mod0, Xtest)}
-\end{Highlighting}
-\end{Shaded}
 
-\begin{verbatim}
-## Loading required package: gbm
-\end{verbatim}
-
-\begin{verbatim}
-## Loading required package: survival
-\end{verbatim}
-
-\begin{verbatim}
-## 
-## Attaching package: 'survival'
-\end{verbatim}
-
-\begin{verbatim}
-## The following object is masked from 'package:caret':
-## 
-##     cluster
-\end{verbatim}
-
-\begin{verbatim}
-## Loading required package: splines
-\end{verbatim}
-
-\begin{verbatim}
-## Loading required package: parallel
-\end{verbatim}
-
-\begin{verbatim}
-## Loaded gbm 2.1.3
-\end{verbatim}
-
-\begin{verbatim}
-## Loading required package: plyr
-\end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
 \CommentTok{# pred1 <- }
 
 \CommentTok{# pred2 <- }

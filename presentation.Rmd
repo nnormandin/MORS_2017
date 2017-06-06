@@ -10,6 +10,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
 library(mlbench)
 library(caret)
 library(data.table)
@@ -301,7 +302,7 @@ mod0 <- train(x = Xtrain, y = ytrain, method = 'gbm',
 Map the continuous `y` vector into a binary matrix
 
 \footnotesize
-```{r, echo = TRUE}
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
 library(localexpeRt)
 yb <- BinCols(ytrain, n = 8)
 ```
@@ -329,7 +330,7 @@ PlotLEs(LE_info)
 Now for each separate instance, we're predicting a distribution instead of a value:
 
 \footnotesize
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
+```{r, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE}
 FitInstance(LE_info$preds.matrix[1,], yb$y.vals, plot = TRUE)
 ```
 
@@ -337,7 +338,7 @@ FitInstance(LE_info$preds.matrix[1,], yb$y.vals, plot = TRUE)
 Now for each separate instance, we're predicting a distribution instead of a value:
 
 \footnotesize
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
+```{r, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE}
 FitInstance(LE_info$preds.matrix[2,], yb$y.vals, plot = TRUE)
 ```
 
@@ -345,13 +346,81 @@ FitInstance(LE_info$preds.matrix[2,], yb$y.vals, plot = TRUE)
 Now for each separate instance, we're predicting a distribution instead of a value:
 
 \footnotesize
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
+```{r, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE}
 FitInstance(LE_info$preds.matrix[3,], yb$y.vals, plot = TRUE)
+```
+
+## COA 1: Use a local expert ensemble
+Predict $\hat{y}$ using just the means of the empirical distributions
+
+\footnotesize
+```{r, echo=TRUE, message=FALSE, warning=FALSE, cache = TRUE}
+LE_fits <- FitMatrix(LE_info$preds.matrix, yb$y.vals)
+MLmetrics::RMSE(LE_fits$mean, ytrain)
 ```
 
 
 ## COA 2: Local expert with calibrated probabilities
 
+The output of each local expert must be calibrated independently. Each has a distinct reliability plot, and class imbalance has a substantial effect on the probability scores generated.
+
+```{r, fig.height=5, fig.width=10}
+pm <- as.data.table(LE_info$preds.matrix)
+c5 <- ifelse(yb$cols$c5 == 'DOWN', 1, 0)
+ReliabilityPlot(c5, pm$c5, bins = 10)
+```
+
+## COA 2: Local expert with calibrated probabilities
+
+The output of each local expert must be calibrated independently. Each has a distinct reliability plot, and class imbalance has a substantial effect on the probability scores generated.
+
+```{r, fig.height=5, fig.width=10}
+c3 <- ifelse(yb$cols$c3 == 'DOWN', 1, 0)
+ReliabilityPlot(c3, pm$c5, bins = 10)
+```
+
+## COA 2: Local expert with calibrated probabilities
+
+Instead of simply fitting an isotonic regression model to our local expert output, we can remove some of the bumpiness of the step function and reduce overfitting by bootstrapping. The steps are:
+
+1. Draw random sample with replacement
+2. Fit isotonic step function using PAVA algorithm
+3. Repeat steps 1 & 2 for 500 iterations
+4. Average all step functions
+5. Return final `step function' (still monotonic)
+
+## COA 2: Local expert with calibrated probabilities
+```{r}
+bootstrap_iso <- function(preds, y, NBOOT = 500, SAMP = 0.1){
+  
+  samp_iso <- function(x, y, N, SAMP) {
+    rows <- sample(seq(N), as.integer(N * SAMP))
+    return(as.stepfun(isoreg(x[rows], y[rows])))
+  }
+  
+  repeated_iso <- function(NBOOT, x, y, N, SAMP){
+    return(lapply(seq(NBOOT), function(i) samp_iso(x=x, y=y, N=N, SAMP=SAMP)))
+  }
+  
+  N <- NROW(preds)
+  mods <- lapply(preds, function(x){
+    repeated_iso(NBOOT = NBOOT, SAMP = SAMP, N = N,
+                 x = x, y = y)})
+  return(mods)
+}
+
+predict_bootiso <- function(models, newdata){
+  levels <- names(models)
+  out <- data.table(tmp = seq(nrow(newdata)))
+  
+  for (i in levels){
+    out[, paste(i) := apply(sapply(models[[i]], function(x){
+      x(newdata[[i]])}), 1, mean)]
+  }
+  
+  return(out)
+}
+```
 
 
 # Results
@@ -359,7 +428,7 @@ FitInstance(LE_info$preds.matrix[3,], yb$y.vals, plot = TRUE)
 ## Evaluate model performance
 
 \footnotesize
-```{r, echo = TRUE}
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
 pred0 <- predict(mod0, Xtest)
 
 # pred1 <- 
