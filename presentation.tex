@@ -474,18 +474,11 @@ Induce separate models across each column in the matrix
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\KeywordTok{PlotLEs}\NormalTok{(LE_info)}
+\KeywordTok{sink}\NormalTok{(}\StringTok{'/dev/null'}\NormalTok{); }\KeywordTok{PlotLEs}\NormalTok{(LE_info); }\KeywordTok{sink}\NormalTok{()}
 \end{Highlighting}
 \end{Shaded}
 
 \includegraphics{presentation_files/figure-beamer/unnamed-chunk-13-1.pdf}
-
-\begin{verbatim}
-## The maximum accuracy is 0.99 
-## The average accuracy is 0.942 
-## The minimum kappa is -0.00242 
-## The average kappa is 0.394
-\end{verbatim}
 
 \end{frame}
 

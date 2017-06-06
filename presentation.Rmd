@@ -322,15 +322,15 @@ LE_info <- ExtractModelInfo(LEs)
 ## COA 1: Use a local expert ensemble
 
 \footnotesize
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
-PlotLEs(LE_info)
+```{r, echo=TRUE, fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
+sink('/dev/null'); PlotLEs(LE_info); sink()
 ```
 
 ## COA 1: Use a local expert ensemble
 Now for each separate instance, we're predicting a distribution instead of a value:
 
 \footnotesize
-```{r, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE}
+```{r, echo=FALSE, fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
 FitInstance(LE_info$preds.matrix[1,], yb$y.vals, plot = TRUE)
 ```
 
@@ -338,7 +338,7 @@ FitInstance(LE_info$preds.matrix[1,], yb$y.vals, plot = TRUE)
 Now for each separate instance, we're predicting a distribution instead of a value:
 
 \footnotesize
-```{r, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE}
+```{r, echo=FALSE, fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
 FitInstance(LE_info$preds.matrix[2,], yb$y.vals, plot = TRUE)
 ```
 
@@ -346,7 +346,7 @@ FitInstance(LE_info$preds.matrix[2,], yb$y.vals, plot = TRUE)
 Now for each separate instance, we're predicting a distribution instead of a value:
 
 \footnotesize
-```{r, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE}
+```{r, echo=FALSE, fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
 FitInstance(LE_info$preds.matrix[3,], yb$y.vals, plot = TRUE)
 ```
 
@@ -403,9 +403,11 @@ bootstrap_iso <- function(preds, y, NBOOT = 500, SAMP = 0.1){
   }
   
   N <- NROW(preds)
-  mods <- lapply(preds, function(x){
+  N_LE <- NCOL(preds)
+  
+  mods <- lapply(seq_along(N_LE), function(x){
     repeated_iso(NBOOT = NBOOT, SAMP = SAMP, N = N,
-                 x = x, y = y)})
+                 x = preds[,x], y = y[,x])})
   return(mods)
 }
 
