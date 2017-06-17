@@ -6,6 +6,7 @@ output:
     colortheme: seahorse
     keep_tex: yes
     theme: Dresden
+    slide_level: 2
 ---
 
 ```{r setup, include=FALSE}
@@ -17,6 +18,8 @@ library(data.table)
 library(MLmetrics)
 library(localexpeRt)
 data("PimaIndiansDiabetes")
+
+setwd('/home/nick/R/projects/MORS_2017/')
 
 ReliabilityPlot <- function(obs, pred, bins = 10) {
   # save and reset default graphical parameters
@@ -53,7 +56,15 @@ ReliabilityPlot <- function(obs, pred, bins = 10) {
   lines(k$V2, k$V1, col = 'red', type = 'o', lwd = 4)
 }
 
-
+ExtractBestPreds <- function(model, col = 'pred') {
+  best.pred.key <-
+    data.table::data.table(model$bestTune, key = names(model$bestTune)) # save this
+  all.preds <-
+    data.table::data.table(model$pred, key = names(model$bestTune))
+  best.pred <- all.preds[best.pred.key,] # save this, and reorder?
+  data.table::setorderv(best.pred, c("rowIndex", "Resample"))
+  return(best.pred[[eval(col)]])
+}
 
 ```
 
@@ -131,6 +142,10 @@ When $s_i = 0.9$, the probability of a correct classification should converge to
 
 ## How is local expert different from normal regression?
 
+- The local expert predictions can be reconstructed to form an empirical CDF
+- By fitting a spline to these points and then differentiating, we can create a unique PDF for each prediction
+- We can forecast $\hat{y}$ based on the moments of the distribution, or fit another meta-model on the output of the local expert ensemble (see Wolpert's work re: stacked generalization)
+- **BUT,** all of these cool things we could do are dependent on having well-calibrated probability scores
 
 # Probability calibration
 
@@ -226,7 +241,7 @@ lines(iso_mod, lwd = 4)
 
 ```
 
-The logarithmic loss here is `r MLmetrics::LogLoss(result$iso_probs, result$class)`
+<!-- The logarithmic loss here is `r MLmetrics::LogLoss(result$iso_probs, result$class)` -->
 
 
 ## Method 2: Platt Scaling
@@ -283,7 +298,7 @@ ytrain <- y[trainset]; ytest <- y[-trainset]
 ```
 
 ```{r}
-tc <- trainControl(method = 'cv', number = 3, savePredictions = TRUE,
+tc <- trainControl(method = 'cv', number = 5, savePredictions = TRUE,
                    classProbs = TRUE, returnData = FALSE)
 ```
 
@@ -294,6 +309,9 @@ tc <- trainControl(method = 'cv', number = 3, savePredictions = TRUE,
 mod0 <- train(x = Xtrain, y = ytrain, method = 'gbm',
               tuneLength = 1, trControl = tc,
               verbose = FALSE)
+
+mod0_preds <- ExtractBestPreds(mod0)
+mod0_preds[mod0_preds < 0] <- 0
 ```
 
 
@@ -304,7 +322,7 @@ Map the continuous `y` vector into a binary matrix
 \footnotesize
 ```{r, echo=TRUE, message=FALSE, warning=FALSE}
 library(localexpeRt)
-yb <- BinCols(ytrain, n = 8)
+yb <- BinCols(ytrain, n = 30)
 ```
 
 \normalsize
@@ -313,7 +331,7 @@ Induce separate models across each column in the matrix
 \footnotesize
 ```{r, echo=TRUE, message=FALSE, warning=FALSE, cache = TRUE}
 LEs <- TrainLEs(x = Xtrain, bincols = yb$cols, trControl = tc,
-                method = 'gbm', n.folds = 3, tuneLength = 1,
+                method = 'gbm', n.folds = 5, tuneLength = 1,
                 verbose = FALSE)
 
 LE_info <- ExtractModelInfo(LEs)
@@ -389,9 +407,12 @@ Instead of simply fitting an isotonic regression model to our local expert outpu
 4. Average all step functions
 5. Return final `step function' (still monotonic)
 
-## COA 2: Local expert with calibrated probabilities
+<!-- ## COA 2: Local expert with calibrated probabilities -->
+
 ```{r}
-bootstrap_iso <- function(preds, y, NBOOT = 500, SAMP = 0.1){
+bootstrap_iso <- function(preds, y, NBOOT = 500, SAMP = 0.5){
+  preds <- as.data.frame(preds)
+  y <- as.data.frame(y)
   
   samp_iso <- function(x, y, N, SAMP) {
     rows <- sample(seq(N), as.integer(N * SAMP))
@@ -405,43 +426,59 @@ bootstrap_iso <- function(preds, y, NBOOT = 500, SAMP = 0.1){
   N <- NROW(preds)
   N_LE <- NCOL(preds)
   
-  mods <- lapply(seq_along(N_LE), function(x){
+  mods <- lapply(seq(N_LE), function(i){
     repeated_iso(NBOOT = NBOOT, SAMP = SAMP, N = N,
-                 x = preds[,x], y = y[,x])})
+                 x = preds[,i], y = ifelse(y[,i]=='DOWN', 1,0))})
   return(mods)
 }
 
 predict_bootiso <- function(models, newdata){
-  levels <- names(models)
+  levels <- length(models)
   out <- data.table(tmp = seq(nrow(newdata)))
   
-  for (i in levels){
-    out[, paste(i) := apply(sapply(models[[i]], function(x){
+  for (i in seq(levels)){
+    out[, paste0('col',i) := apply(sapply(models[[i]], function(x){
       x(newdata[[i]])}), 1, mean)]
   }
+  out[, tmp:=NULL]
   
   return(out)
 }
 ```
 
+```{r, echo=TRUE, message=FALSE, warning=FALSE, cache = TRUE}
+iso_mods <- bootstrap_iso(pm, yb$cols, NBOOT = 300, SAMP = 0.2)
+pm2 <- predict_bootiso(iso_mods, pm)
 
-# Results
+LE_fits2 <- FitMatrix(as.matrix(pm2), yb$y.vals)
+MLmetrics::RMSE(log(1 + LE_fits$mean), log(1 + ytrain))
+MLmetrics::RMSE(log(1 + LE_fits2$mean), log(1 + ytrain))
+MLmetrics::RMSE(log(1 + mod0_preds), log(1 + ytrain))
+```
 
-## Evaluate model performance
-
-\footnotesize
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
-pred0 <- predict(mod0, Xtest)
-
-# pred1 <- 
-
-# pred2 <- 
+```{r}
 
 ```
 
+
+
+<!-- # Results -->
+
+<!-- ## Evaluate model performance -->
+
+<!-- \footnotesize -->
+<!-- ```{r, echo=TRUE, message=FALSE, warning=FALSE} -->
+<!-- pred0 <- predict(mod0, Xtest) -->
+
+<!-- # pred1 <-  -->
+
+<!-- # pred2 <-  -->
+
+<!-- ``` -->
+
 # Conclusion
 
-## What have I demonstrated?
+<!-- ## What have I demonstrated? -->
 
 ## Which topics require more research?
 
