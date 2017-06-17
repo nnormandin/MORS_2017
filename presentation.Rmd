@@ -12,60 +12,9 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(dev = 'pdf')
-library(mlbench)
-library(caret)
-library(data.table)
-library(MLmetrics)
-library(localexpeRt)
-data("PimaIndiansDiabetes")
 
 setwd('/home/nick/R/projects/MORS_2017/')
-
-ReliabilityPlot <- function(obs, pred, bins = 10) {
-  # save and reset default graphical parameters
-  opar <- par(no.readonly = TRUE)
-  on.exit(par(opar))
-  plot(
-    c(0, 1),
-    c(0, 1),
-    col = "grey",
-    type = "l",
-    xlab = expression('s'[i]),
-    ylab = expression('p(c'[i]*')')
-  )
-  
-  # scale
-  minp <- min(pred)
-  maxp <- max(pred)
-  pdiff <- maxp - minp
-  pred <- (pred - minp) / pdiff
-  
-  # bins
-  bin.pred <- cut(pred, breaks = bins)
-  
-  # ratio
-  k <- plyr::ldply(levels(bin.pred), function(x) {
-    idx <- x == bin.pred
-    c(sum(obs[idx]) / length(obs[idx]), mean(pred[idx]))
-  })
-  
-  # replace NAs
-  is.nan.idx <- !is.nan(k$V2)
-  k <- k[is.nan.idx, ]
-  
-  lines(k$V2, k$V1, col = 'red', type = 'o', lwd = 4)
-}
-
-ExtractBestPreds <- function(model, col = 'pred') {
-  best.pred.key <-
-    data.table::data.table(model$bestTune, key = names(model$bestTune)) # save this
-  all.preds <-
-    data.table::data.table(model$pred, key = names(model$bestTune))
-  best.pred <- all.preds[best.pred.key,] # save this, and reorder?
-  data.table::setorderv(best.pred, c("rowIndex", "Resample"))
-  return(best.pred[[eval(col)]])
-}
-
+source('./utils.R')
 ```
 
 # Introduction
@@ -79,7 +28,7 @@ ExtractBestPreds <- function(model, col = 'pred') {
 
 ## What is `local expert`?
 
-I created a new kind of ensemble forecasting method that I've called local expert regression. It involves the decomposition of a supervised learning task with a continuous target variable (*regression*) into a series of of many $\{0, 1\}$ mappings corresponding to separate *binary probabilistic classification* tasks that produce estimates on the $[0, 1]$ interval.
+I created a new kind of ensemble forecasting method called local expert regression. It involves the decomposition of a supervised learning task with a continuous target variable (*regression*) into a series of of many $\{0, 1\}$ mappings corresponding to separate *binary probabilistic classification* tasks that produce estimates on the $[0, 1]$ interval.
 
 #####  Why is this useful ?! 
 Because you can aggregate the ensemble predictions to form a completely unique *probability distribution function* for each prediction. You can understand **risk** not just in terms of a model, but in terms of each individual forecast.
@@ -287,18 +236,18 @@ lines(y = sort(result$platt_probs), x = sort(result$prob), lwd = 4, col = 'red')
 I cleaned and pre-processed separately, so we'll just read in those files and partition the train and test sets.
 
 \footnotesize
-```{r, echo = TRUE}
+```{r, echo = TRUE, cache = TRUE}
 X <- readRDS('./dataX')
 y <- readRDS('./dataY')
 
-trainset <- createDataPartition(y, p = 0.1)[[1]]
+trainset <- createDataPartition(y, p = 0.7)[[1]]
 
 Xtrain <- X[trainset,]; Xtest <- X[-trainset,]
 ytrain <- y[trainset]; ytest <- y[-trainset]
 ```
 
-```{r}
-tc <- trainControl(method = 'cv', number = 5, savePredictions = TRUE,
+```{r, cache = TRUE}
+tc <- trainControl(method = 'cv', number = 8, savePredictions = TRUE,
                    classProbs = TRUE, returnData = FALSE)
 ```
 
@@ -307,7 +256,7 @@ tc <- trainControl(method = 'cv', number = 5, savePredictions = TRUE,
 \footnotesize
 ```{r, echo = TRUE, message=FALSE, warning=FALSE, cache = TRUE}
 mod0 <- train(x = Xtrain, y = ytrain, method = 'gbm',
-              tuneLength = 1, trControl = tc,
+              tuneLength = 5, trControl = tc,
               verbose = FALSE)
 
 mod0_preds <- ExtractBestPreds(mod0)
@@ -315,14 +264,13 @@ mod0_preds[mod0_preds < 0] <- 0
 ```
 
 
-## COA 1: Use a local expert ensemble
+## COA 1A: Use a local expert ensemble
 
 Map the continuous `y` vector into a binary matrix
 
 \footnotesize
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
-library(localexpeRt)
-yb <- BinCols(ytrain, n = 30)
+```{r, echo=TRUE, message=FALSE, warning=FALSE, cache = TRUE}
+yb <- BinCols(ytrain, n = 25)
 ```
 
 \normalsize
@@ -331,64 +279,88 @@ Induce separate models across each column in the matrix
 \footnotesize
 ```{r, echo=TRUE, message=FALSE, warning=FALSE, cache = TRUE}
 LEs <- TrainLEs(x = Xtrain, bincols = yb$cols, trControl = tc,
-                method = 'gbm', n.folds = 5, tuneLength = 1,
+                method = 'gbm', n.folds = 8, tuneLength = 6,
                 verbose = FALSE)
 
 LE_info <- ExtractModelInfo(LEs)
 ```
 
-## COA 1: Use a local expert ensemble
+## COA 1A: Use a local expert ensemble
 
 \footnotesize
 ```{r, echo=TRUE, fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
 sink('/dev/null'); PlotLEs(LE_info); sink()
 ```
 
-## COA 1: Use a local expert ensemble
+## COA 1A: Use a local expert ensemble
 Now for each separate instance, we're predicting a distribution instead of a value:
 
 \footnotesize
 ```{r, echo=FALSE, fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
-FitInstance(LE_info$preds.matrix[1,], yb$y.vals, plot = TRUE)
+tmp <- FitInstance(LE_info$preds.matrix[1,], yb$y.vals, plot = TRUE)
 ```
 
-## COA 1: Use a local expert ensemble
+## COA 1A: Use a local expert ensemble
 Now for each separate instance, we're predicting a distribution instead of a value:
 
 \footnotesize
 ```{r, echo=FALSE, fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
-FitInstance(LE_info$preds.matrix[2,], yb$y.vals, plot = TRUE)
+tmp <- FitInstance(LE_info$preds.matrix[2,], yb$y.vals, plot = TRUE)
 ```
 
-## COA 1: Use a local expert ensemble
+## COA 1A: Use a local expert ensemble
 Now for each separate instance, we're predicting a distribution instead of a value:
 
 \footnotesize
 ```{r, echo=FALSE, fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
-FitInstance(LE_info$preds.matrix[3,], yb$y.vals, plot = TRUE)
+tmp <- FitInstance(LE_info$preds.matrix[3,], yb$y.vals, plot = TRUE)
 ```
 
-## COA 1: Use a local expert ensemble
+## COA 1A: Use a local expert ensemble
 Predict $\hat{y}$ using just the means of the empirical distributions
 
 \footnotesize
 ```{r, echo=TRUE, message=FALSE, warning=FALSE, cache = TRUE}
 LE_fits <- FitMatrix(LE_info$preds.matrix, yb$y.vals)
-MLmetrics::RMSE(LE_fits$mean, ytrain)
+```
+
+## COA 1B: 
+
+Fit a stacked meta-model on the local expert layer output (include distribution mean as additional meta-feature).
+
+```{r, cache = TRUE}
+pm <- as.data.table(LE_info$preds.matrix)
+
+tc1 <- trainControl(method = 'cv', number = 8, savePredictions = TRUE,
+                   returnData = TRUE)
+```
+
+\footnotesize
+```{r, echo = TRUE, cache = TRUE}
+meta_X1 <- pm
+meta_X1$mean <- LE_fits$mean
+
+mod_1B <- train(x= meta_X1, y = ytrain, method = 'gbm',
+                tuneLength = 10, trControl = tc1,
+                verbose = FALSE)
+```
+
+```{r, cache = TRUE}
+mod1B_preds <- ExtractBestPreds(mod_1B)
+mod1B_preds[mod1B_preds < 0] <- 0
 ```
 
 
-## COA 2: Local expert with calibrated probabilities
+## COA 2A: Local expert with calibrated probabilities
 
 The output of each local expert must be calibrated independently. Each has a distinct reliability plot, and class imbalance has a substantial effect on the probability scores generated.
 
 ```{r, fig.height=5, fig.width=10}
-pm <- as.data.table(LE_info$preds.matrix)
 c5 <- ifelse(yb$cols$c5 == 'DOWN', 1, 0)
 ReliabilityPlot(c5, pm$c5, bins = 10)
 ```
 
-## COA 2: Local expert with calibrated probabilities
+## COA 2A: Local expert with calibrated probabilities
 
 The output of each local expert must be calibrated independently. Each has a distinct reliability plot, and class imbalance has a substantial effect on the probability scores generated.
 
@@ -397,7 +369,7 @@ c3 <- ifelse(yb$cols$c3 == 'DOWN', 1, 0)
 ReliabilityPlot(c3, pm$c5, bins = 10)
 ```
 
-## COA 2: Local expert with calibrated probabilities
+## COA 2A: Local expert with calibrated probabilities
 
 Instead of simply fitting an isotonic regression model to our local expert output, we can remove some of the bumpiness of the step function and reduce overfitting by bootstrapping. The steps are:
 
@@ -409,72 +381,92 @@ Instead of simply fitting an isotonic regression model to our local expert outpu
 
 <!-- ## COA 2: Local expert with calibrated probabilities -->
 
-```{r}
-bootstrap_iso <- function(preds, y, NBOOT = 500, SAMP = 0.5){
-  preds <- as.data.frame(preds)
-  y <- as.data.frame(y)
-  
-  samp_iso <- function(x, y, N, SAMP) {
-    rows <- sample(seq(N), as.integer(N * SAMP))
-    return(as.stepfun(isoreg(x[rows], y[rows])))
-  }
-  
-  repeated_iso <- function(NBOOT, x, y, N, SAMP){
-    return(lapply(seq(NBOOT), function(i) samp_iso(x=x, y=y, N=N, SAMP=SAMP)))
-  }
-  
-  N <- NROW(preds)
-  N_LE <- NCOL(preds)
-  
-  mods <- lapply(seq(N_LE), function(i){
-    repeated_iso(NBOOT = NBOOT, SAMP = SAMP, N = N,
-                 x = preds[,i], y = ifelse(y[,i]=='DOWN', 1,0))})
-  return(mods)
-}
-
-predict_bootiso <- function(models, newdata){
-  levels <- length(models)
-  out <- data.table(tmp = seq(nrow(newdata)))
-  
-  for (i in seq(levels)){
-    out[, paste0('col',i) := apply(sapply(models[[i]], function(x){
-      x(newdata[[i]])}), 1, mean)]
-  }
-  out[, tmp:=NULL]
-  
-  return(out)
-}
-```
-
-```{r, echo=TRUE, message=FALSE, warning=FALSE, cache = TRUE}
-iso_mods <- bootstrap_iso(pm, yb$cols, NBOOT = 300, SAMP = 0.2)
+```{r, message=FALSE, warning=FALSE, cache = TRUE}
+iso_mods <- bootstrap_iso(pm, yb$cols, NBOOT = 500, SAMP = 0.3)
 pm2 <- predict_bootiso(iso_mods, pm)
 
 LE_fits2 <- FitMatrix(as.matrix(pm2), yb$y.vals)
-MLmetrics::RMSE(log(1 + LE_fits$mean), log(1 + ytrain))
-MLmetrics::RMSE(log(1 + LE_fits2$mean), log(1 + ytrain))
-MLmetrics::RMSE(log(1 + mod0_preds), log(1 + ytrain))
 ```
 
-```{r}
+## COA 2B: Stacked model with calibrated probabilities 
+
+Fit a stacked meta-model on the local expert layer output (include distribution mean as additional meta-feature).
+
+\footnotesize
+```{r, echo = TRUE, cache = TRUE}
+meta_X2 <- pm2
+meta_X2$mean <- LE_fits2$mean
+
+mod_2B <- train(x= meta_X2, y = ytrain, method = 'gbm',
+                tuneLength = 8, trControl = tc1,
+                verbose = FALSE)
+```
+
+```{r, cache = TRUE}
+mod2B_preds <- ExtractBestPreds(mod_2B)
+mod2B_preds[mod2B_preds < 0] <- 0
+```
+
+# Results
+
+## Model CV and out-of-sample RMLSE
+
+```{r, message=FALSE, warning=FALSE, cache=TRUE}
+coa0_testpreds <- predict(mod0, newdata = Xtest)
+coa0_testpreds[coa0_testpreds < 0] <- 0
+coa0_oos <- MLmetrics::RMSE(log(1 + coa0_testpreds), log(1 + ytest))
+
+LE_testpreds <- as.data.frame(PredictLEs(Xtest, LEs))
+LE_testfits <- FitMatrix(as.data.frame(LE_testpreds), yb$y.vals)
+LE_testfits$mean[LE_testfits$mean < 0] <- 0
+coa1a_oos <- MLmetrics::RMSE(log(1 + LE_testfits$mean), log(1 + ytest))
+
+testX1 <- LE_testpreds
+testX1$mean <- LE_testfits$mean
+coa1b_oos <- MLmetrics::RMSE(log(1 + predict(mod_1B, testX1)), log(1 + ytest))
+
+LE_testpreds2 <- predict_bootiso(iso_mods, LE_testpreds)
+LE_testfits2 <- FitMatrix(LE_testpreds2, yb$y.vals)
+coa2a_oos <- MLmetrics::RMSE(log(1 + LE_testfits2$mean), log(1 + ytest))
+
+testX2 <- LE_testpreds2
+testX2$mean <- LE_testfits2$mean
+coa2b_oos <- MLmetrics::RMSE(log(1 + predict(mod_2B, testX2)), log(1 + ytest))
 
 ```
 
 
+```{r, message=FALSE, warning=FALSE, cache = TRUE}
+coa1a_mse <- MLmetrics::RMSE(log(1 + LE_fits$mean), log(1 + ytrain))
+coa1b_mse <- MLmetrics::RMSE(log(1 + mod1B_preds), log(1 + ytrain))
 
-<!-- # Results -->
+coa2a_mse <- MLmetrics::RMSE(log(1 + LE_fits2$mean), log(1 + ytrain))
+coa2b_mse <- MLmetrics::RMSE(log(1 + mod2B_preds), log(1 + ytrain))
+  
+coa0_mse <- MLmetrics::RMSE(log(1 + mod0_preds), log(1 + ytrain))
 
-<!-- ## Evaluate model performance -->
+opar <- par()
+par(las = 1)
+par(mar = c(5, 6, 4, 2) + 0.1)
 
-<!-- \footnotesize -->
-<!-- ```{r, echo=TRUE, message=FALSE, warning=FALSE} -->
-<!-- pred0 <- predict(mod0, Xtest) -->
+tmp <- barplot(c(coa0_mse, coa1a_mse, coa1b_mse, coa2a_mse, coa2b_mse),
+        border = F, space = 1,
+        horiz = TRUE, names.arg = c('gbm', 'LE means', 'LE meta',
+                                    'LE means (iso)', 'LE meta (iso)'),
+        cex.names = (0.8), xlim = c(0,.7))
 
-<!-- # pred1 <-  -->
 
-<!-- # pred2 <-  -->
+# segments(x0 = 0, y0 = tmp, y1 = tmp, x1 = c(coa0_oos, coa1a_oos, coa1b_oos, coa2a_oos, coa2b_oos),
+#        pch = 1, col = 'gray')
 
-<!-- ``` -->
+points(x = c(coa0_oos, coa1a_oos, coa1b_oos, coa2a_oos, coa2b_oos),
+       y = tmp, pch = 15)
+
+abline(v = seq(0, 1, 0.1), col = 'white')
+
+par(opar)
+```
+
 
 # Conclusion
 
