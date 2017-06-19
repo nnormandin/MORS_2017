@@ -240,7 +240,7 @@ I cleaned and pre-processed separately, so we'll just read in those files and pa
 X <- readRDS('./dataX')
 y <- readRDS('./dataY')
 
-trainset <- createDataPartition(y, p = 0.7)[[1]]
+trainset <- createDataPartition(y, p = 0.6)[[1]]
 
 Xtrain <- X[trainset,]; Xtest <- X[-trainset,]
 ytrain <- y[trainset]; ytest <- y[-trainset]
@@ -270,20 +270,28 @@ Map the continuous `y` vector into a binary matrix
 
 \footnotesize
 ```{r, echo=TRUE, message=FALSE, warning=FALSE, cache = TRUE}
-yb <- BinCols(ytrain, n = 25)
+yb <- BinCols(ytrain, n = 25, mode = 'EP')
 ```
 
 \normalsize
 Induce separate models across each column in the matrix
 
 \footnotesize
-```{r, echo=TRUE, message=FALSE, warning=FALSE, cache = TRUE}
+```{r, echo=TRUE, message=FALSE, warning=FALSE, cache = TRUE, cache.lazy=FALSE}
 LEs <- TrainLEs(x = Xtrain, bincols = yb$cols, trControl = tc,
-                method = 'gbm', n.folds = 8, tuneLength = 6,
+                method = 'gbm', n.folds = 8, tuneLength = 8,
                 verbose = FALSE)
 
 LE_info <- ExtractModelInfo(LEs)
 ```
+
+```{r, message=FALSE, warning=FALSE}
+# save local experts so I don't have to compute again
+
+try(save(LEs, file = '/home/nick/Desktop/LE_backup.RData'))
+
+```
+
 
 ## COA 1A: Use a local expert ensemble
 
@@ -297,7 +305,25 @@ Now for each separate instance, we're predicting a distribution instead of a val
 
 \footnotesize
 ```{r, echo=FALSE, fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
-tmp <- FitInstance(LE_info$preds.matrix[1,], yb$y.vals, plot = TRUE)
+tmp <- FitInstance(LE_info$preds.matrix[sample(1:20000, 1),], yb$y.vals, plot = FALSE)
+sample.interp <- (tmp$sample.points[1:length(tmp$sample.points)-1]
+                    + tmp$sample.points[2:length(tmp$sample.points)])/2
+plot(x = sample.interp, y = tmp$epdf, type = 'l',
+     xlab = 'target variable', ylab = 'probability', xlim = c(0, 2e07))
+
+```
+
+
+## COA 1A: Use a local expert ensemble
+Now for each separate instance, we're predicting a distribution instead of a value:
+
+\footnotesize
+```{r, echo=FALSE, fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
+tmp <- FitInstance(LE_info$preds.matrix[sample(1:20000, 1),], yb$y.vals, plot = FALSE)
+sample.interp <- (tmp$sample.points[1:length(tmp$sample.points)-1]
+                    + tmp$sample.points[2:length(tmp$sample.points)])/2
+plot(x = sample.interp, y = tmp$epdf, type = 'l',
+     xlab = 'target variable', ylab = 'probability', xlim = c(0, 2e07))
 ```
 
 ## COA 1A: Use a local expert ensemble
@@ -305,15 +331,11 @@ Now for each separate instance, we're predicting a distribution instead of a val
 
 \footnotesize
 ```{r, echo=FALSE, fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
-tmp <- FitInstance(LE_info$preds.matrix[2,], yb$y.vals, plot = TRUE)
-```
-
-## COA 1A: Use a local expert ensemble
-Now for each separate instance, we're predicting a distribution instead of a value:
-
-\footnotesize
-```{r, echo=FALSE, fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
-tmp <- FitInstance(LE_info$preds.matrix[3,], yb$y.vals, plot = TRUE)
+tmp <- FitInstance(LE_info$preds.matrix[sample(1:20000, 1),], yb$y.vals, plot = FALSE)
+sample.interp <- (tmp$sample.points[1:length(tmp$sample.points)-1]
+                    + tmp$sample.points[2:length(tmp$sample.points)])/2
+plot(x = sample.interp, y = tmp$epdf, type = 'l',
+     xlab = 'target variable', ylab = 'probability', xlim = c(0, 2e07))
 ```
 
 ## COA 1A: Use a local expert ensemble
@@ -322,13 +344,15 @@ Predict $\hat{y}$ using just the means of the empirical distributions
 \footnotesize
 ```{r, echo=TRUE, message=FALSE, warning=FALSE, cache = TRUE}
 LE_fits <- FitMatrix(LE_info$preds.matrix, yb$y.vals)
+plot(x = ytrain, y = LE_fits$mean)
 ```
+
 
 ## COA 1B: 
 
 Fit a stacked meta-model on the local expert layer output (include distribution mean as additional meta-feature).
 
-```{r, cache = TRUE}
+```{r}
 pm <- as.data.table(LE_info$preds.matrix)
 
 tc1 <- trainControl(method = 'cv', number = 8, savePredictions = TRUE,
@@ -336,7 +360,7 @@ tc1 <- trainControl(method = 'cv', number = 8, savePredictions = TRUE,
 ```
 
 \footnotesize
-```{r, echo = TRUE, cache = TRUE}
+```{r, echo = TRUE}
 meta_X1 <- pm
 meta_X1$mean <- LE_fits$mean
 
@@ -345,7 +369,7 @@ mod_1B <- train(x= meta_X1, y = ytrain, method = 'gbm',
                 verbose = FALSE)
 ```
 
-```{r, cache = TRUE}
+```{r}
 mod1B_preds <- ExtractBestPreds(mod_1B)
 mod1B_preds[mod1B_preds < 0] <- 0
 ```
@@ -381,7 +405,7 @@ Instead of simply fitting an isotonic regression model to our local expert outpu
 
 <!-- ## COA 2: Local expert with calibrated probabilities -->
 
-```{r, message=FALSE, warning=FALSE, cache = TRUE}
+```{r, message=FALSE, warning=FALSE}
 iso_mods <- bootstrap_iso(pm, yb$cols, NBOOT = 500, SAMP = 0.3)
 pm2 <- predict_bootiso(iso_mods, pm)
 
@@ -393,7 +417,7 @@ LE_fits2 <- FitMatrix(as.matrix(pm2), yb$y.vals)
 Fit a stacked meta-model on the local expert layer output (include distribution mean as additional meta-feature).
 
 \footnotesize
-```{r, echo = TRUE, cache = TRUE}
+```{r, echo = TRUE}
 meta_X2 <- pm2
 meta_X2$mean <- LE_fits2$mean
 
@@ -402,7 +426,7 @@ mod_2B <- train(x= meta_X2, y = ytrain, method = 'gbm',
                 verbose = FALSE)
 ```
 
-```{r, cache = TRUE}
+```{r}
 mod2B_preds <- ExtractBestPreds(mod_2B)
 mod2B_preds[mod2B_preds < 0] <- 0
 ```
@@ -411,7 +435,7 @@ mod2B_preds[mod2B_preds < 0] <- 0
 
 ## Model CV and out-of-sample RMLSE
 
-```{r, message=FALSE, warning=FALSE, cache=TRUE}
+```{r, message=FALSE, warning=FALSE}
 coa0_testpreds <- predict(mod0, newdata = Xtest)
 coa0_testpreds[coa0_testpreds < 0] <- 0
 coa0_oos <- MLmetrics::RMSE(log(1 + coa0_testpreds), log(1 + ytest))
@@ -436,7 +460,7 @@ coa2b_oos <- MLmetrics::RMSE(log(1 + predict(mod_2B, testX2)), log(1 + ytest))
 ```
 
 
-```{r, message=FALSE, warning=FALSE, cache = TRUE}
+```{r, message=FALSE, warning=FALSE}
 coa1a_mse <- MLmetrics::RMSE(log(1 + LE_fits$mean), log(1 + ytrain))
 coa1b_mse <- MLmetrics::RMSE(log(1 + mod1B_preds), log(1 + ytrain))
 
@@ -474,13 +498,12 @@ par(opar)
 
 ## Which topics require more research?
 
-1. Compensation for class imbalance (SMOTE?)
+1. Formulation as a multi-loss network (asynchronous gradient back-prop)
+2. Compensation for class imbalance (SMOTE?)
 3. Kappa-based optimization methods
 4. High-level parallelization
 
 # Questions
-
-
 
 
 

@@ -10,7 +10,7 @@ purrr::walk(pkgs, library, character.only = TRUE, warn.conflicts = FALSE)
 # devtools::install_github('nnormandin/localexpeRt')
 
 # if you want to run in parallel:
-# doMC::registerDoMC(parallel::detectCores()-1)
+doMC::registerDoMC(parallel::detectCores()-1)
 
 data("PimaIndiansDiabetes")
 
