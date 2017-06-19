@@ -254,7 +254,7 @@ tc <- trainControl(method = 'cv', number = 8, savePredictions = TRUE,
 
 ## COA 0: Tune and train a regression model
 \footnotesize
-```{r, echo = TRUE, message=FALSE, warning=FALSE, cache = TRUE}
+```{r, echo = TRUE, message=FALSE, warning=FALSE}
 mod0 <- train(x = Xtrain, y = ytrain, method = 'gbm',
               tuneLength = 5, trControl = tc,
               verbose = FALSE)
@@ -289,7 +289,7 @@ LE_info <- ExtractModelInfo(LEs)
 # save local experts so I don't have to compute again
 
 try(save(LEs, file = '/home/nick/Desktop/LE_backup.RData'))
-
+set.seed(123)
 ```
 
 
@@ -342,9 +342,9 @@ plot(x = sample.interp, y = tmp$epdf, type = 'l',
 Predict $\hat{y}$ using just the means of the empirical distributions
 
 \footnotesize
-```{r, echo=TRUE, message=FALSE, warning=FALSE, cache = TRUE}
+```{r, echo=TRUE, message=FALSE, warning=FALSE, cache = TRUE, fig.height=5, fig.width=10}
 LE_fits <- FitMatrix(LE_info$preds.matrix, yb$y.vals)
-plot(x = ytrain, y = LE_fits$mean)
+plot(x = log(1+ytrain), y = log(1+LE_fits$mean))
 ```
 
 
